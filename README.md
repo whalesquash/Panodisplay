@@ -18,3 +18,11 @@ source activate psychopanda
 conda install python=3.7 matplotlib jupyter numpy opencv psychopy -c menpo -c cogsci
 
 pip install panda3d==1.10.4.1
+
+# TODOS
+
+* Add recent picture of the working display
+
+* Add Unity code
+
+* Complete User Guide
