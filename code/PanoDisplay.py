@@ -1,13 +1,10 @@
-#Screenshots
 
-#Import sphere (.x file)
 from math import pi, sin, cos, tan, atan
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.interval.IntervalGlobal import *
 from panda3d.core import *
 import sys
-from direct.gui.OnscreenText import OnscreenText
 import numpy as np
 from io import StringIO, BytesIO
 import os
@@ -47,19 +44,85 @@ class PanoDisplay(ShowBase):
     '''
     
     
-    def __init__(self, filename = None, scale = None, offset = None, win_origin = [0,0], win_size = [1280,720]):
-        
-        bufferSize = 1024
-        
-        #Window size and position
+    def __init__(self, filename = None, scale = None, offset = None, win_origin = [1920,0], win_size = [1280,720]):
+
+        # Window size and position
         loadPrcFileData("", "win-origin {} {}".format(win_origin[0],win_origin[1]))
         loadPrcFileData("", "win-size {} {}".format(win_size[0],win_size[1]))
         loadPrcFileData("", "undecorated 1")
         
+        # Init Panda3D 
         ShowBase.__init__(self)
-        self.textObject = OnscreenText(text = "", pos = (-0.95, 0.9), scale = 0.07)
         
+        # Show FPS
         base.setFrameRateMeter(True)
+        
+        # Setting up the sphere and its texture
+        self.setupEnv(filename, scale, offset)
+        
+        # Setting up the camera/projector system
+        self.setupFisheye()
+        
+        # Reset position of the camera and sphere to default values
+        def reset():
+            self.trackball.node().setPos(0, 0, 0)
+            self.trackball.node().setHpr(0, 0, 0)
+            self.rig.setPos(self.x,self.y,self.z)
+            self.rig.setHpr(self.h,self.p,self.r)
+            self.sphere.setHpr(0,0,0)
+            self.sphere.setTexOffset(self.ts, 0,0) 
+        self.accept('r', reset)
+        
+        # Setting up camera controls
+        self.accept('m', lambda: self.rig.setH(self.rig, 1))
+        self.accept('n', lambda: self.rig.setH(self.rig, -1))
+        self.accept('arrow_down', lambda: self.rig.setP(self.rig, -1))
+        self.accept('arrow_up', lambda: self.rig.setP(self.rig, 1))
+        self.accept('arrow_right', lambda: self.rig.setR(self.rig, -1))
+        self.accept('arrow_left', lambda: self.rig.setR(self.rig, 1))
+        self.accept('u', lambda: self.rig.setX(self.rig, -0.05))
+        self.accept('i', lambda: self.rig.setX(self.rig, 0.05))
+        self.accept('k', lambda: self.rig.setY(self.rig, -0.05))
+        self.accept('l', lambda: self.rig.setY(self.rig, 0.05))
+        self.accept('o', lambda: self.rig.setZ(self.rig, -0.05))
+        self.accept('p', lambda: self.rig.setZ(self.rig, 0.05))
+        
+        def print_pos():
+            print(self.rig.getPos())
+            print(self.rig.getHpr())
+        self.accept('z', print_pos)
+        #self.sphere.setTexOffset(self.ts, -1, -0)
+        def updateTex(xc,yc):
+            tsx,tsy = self.sphere.getTexOffset(self.ts)
+            self.sphere.setTexOffset(self.ts, tsx +xc,tsy+ yc)
+        self.accept('t', lambda: updateTex(0.2,0))
+        self.accept('y', lambda: updateTex(-0.2,0))
+        self.accept('g', lambda: updateTex(0,0.2))
+        self.accept('h', lambda: updateTex(0,-0.2))
+        
+        # Quit application
+        def quit():
+            taskMgr.remove('Quit')
+            taskMgr.remove('GenerateMappingData')
+            self.destroy()
+            self.userExit()
+            self.finalizeExit()
+        self.accept('q', quit) 
+        
+        def changeFrame():
+            self.myTexture = self.loader.loadTexture('res/colored_picture.png')
+            self.sphere.setTexture(self.myTexture)
+        
+        #self.taskMgr.add(self.movie_ts, "playTheStim!")
+        
+#         Code for mapping data
+#         self.taskMgr.add(self.generateMappingData, 'GenerateMappingData')
+#         self.x = 0
+#         self.y = 0
+#         self.xmap = np.zeros((bufferSize,bufferSize), dtype =np.float32)
+#         self.ymap = np.zeros((bufferSize,bufferSize), dtype =np.float32)
+    
+    def setupEnv(self, filename, scale, offset):
         # SPHERE
         self.sphere = self.loader.loadModel('res/equirect_sphere.x')
         if filename is None:
@@ -73,14 +136,14 @@ class PanoDisplay(ShowBase):
         self.iTexture = 0
         self.ts = TextureStage('ts')
         #self.ts.setMode(TextureStage.MDecal)
-    #self.ts.setMode(TextureStage.MReplace)
-        #
+        #self.ts.setMode(TextureStage.MReplace)
+        
         for t in self.myTexture:
             t.setWrapU(Texture.WMBorderColor)
             t.setWrapV(Texture.WMBorderColor)
             t.setBorderColor(VBase4(1, 1, 1, 1))
-        #
-#         self.sphere.setTexture(self.ts, self.myTexture[0])
+        
+        self.sphere.setTexture(self.ts, self.myTexture[0])
         
         if scale is None:
             self.uScale, self.vScale = 1, 1
@@ -94,56 +157,23 @@ class PanoDisplay(ShowBase):
             self.uOffset, self.vOffset = offset
         
         self.sphere.setTexOffset(self.ts, self.uOffset, self.vOffset)
-        
-#         bgTexture = self.loader.loadTexture('res/gray.png')
-#         self.tsbg = TextureStage('tsbg')
-#         self.sphere.setTexture(self.tsbg, bgTexture)
-        
-#         #self.sphere.setTransparency(TransparencyAttrib.MAlpha, 1)
-        
-#         diodeTexture = self.loader.loadTexture('res/lena.png', 'res/lena_mask.png')
-#         diodeTexture.setWrapU(Texture.WMBorderColor)
-#         diodeTexture.setWrapV(Texture.WMBorderColor)
-#         diodeTexture.setBorderColor(VBase4(1, 1, 1, 1))
-        
-#         uScale, vScale = 5, 1
-#         self.tsdiode1 = TextureStage('tsdiode1')
-#         self.sphere.setTexture(self.tsdiode1, diodeTexture)
-#         self.sphere.setTexScale(self.tsdiode1, uScale, vScale)
-#         self.sphere.setTexOffset(self.tsdiode1, -4.5, -0)
-
-#         self.tsdiode2 = TextureStage('tsdiode2')
-#         self.sphere.setTexture(self.tsdiode2, diodeTexture)
-#         self.sphere.setTexScale(self.tsdiode2, uScale, vScale)
-#         self.sphere.setTexOffset(self.tsdiode2, 0.5, -0)
-        
-#         self.tsdiode1.setMode(TextureStage.MDecal)
-#         self.tsdiode2.setMode(TextureStage.MDecal)
-        #
-        #self.uScale = uScale
-        #self.vScale = vScale
-        #
-        #self.x = 0
-        #self.y = 0
-        #
-        #self.xmap = np.zeros((bufferSize,bufferSize), np.float32)
-        #self.ymap = np.zeros((bufferSize,bufferSize), np.float32)
-        
+  
         self.sphere.reparentTo(self.render)
         self.sphere.setPos(0,0, 0)
         self.sphere.setScale(5,5,5)
-        # make the cube map buffer.
-        size = bufferSize
-        #self.camLens.setNear(0.01) 
-        #self.camLens.setFar(100) 
-        rig = self.camera.attachNewNode("rig")
         
+    def setupFisheye(self):
+        
+        self.rig = self.camera.attachNewNode("rig")
         self.camera.setPos(0,0,0)
         self.camera.setHpr(0,0,0)
-        rig.setPos(0,0,0)
-        rig.setHpr(0,340,0)
+        self.x,self.y,self.z = 0.0405512, 0.279379, -0.26705#0.00087262, -0.276762, 0.23458
+        self.rig.setPos(self.x,self.y,self.z)
+        self.h, self.p ,self.r = -176.86, -47.9005, -176.635#0, -25, 0
+        self.rig.setHpr(self.h,self.p,self.r)
         
-        buffer = self.win.makeCubeMap("test", size, rig)
+        bufferSize = 1024
+        buffer = self.win.makeCubeMap("test", bufferSize, self.rig)
         assert buffer
         
         # we now get buffer thats going to hold the texture of our new scene
@@ -162,71 +192,22 @@ class PanoDisplay(ShowBase):
         fm.setSquareInscribed(True, 1)
         fm.setReflection(True)
         fm.setFov(359.999)
-        # set up fisheye
+
         card = altRender.attachNewNode(fm.generate())
         card.setTexture(buffer.getTexture())
         #altCam.lookAt(card)
         
         # Disable the scene render on the normal 'render' graph.
         self.win.getDisplayRegion(1).setActive(False)
-
         finalCard = self.loader.loadModel('res/fisheye.egg')
         finalCard.reparentTo(aspect2d)
         finalCard.setTexture(self.altBuffer.getTexture())
         finalCard.setP(90)
-       
-        def reset():
-            self.trackball.node().setPos(0, 0, 0)
-            self.trackball.node().setHpr(0, 0, 0)
-            rig.setHpr(0,340,0)
-            self.sphere.setHpr(0,0,0)
-            self.sphere.setTexOffset(self.ts, 0,0) 
-        self.accept('m', lambda: self.sphere.setH(self.sphere, 3))
-        self.accept('n', lambda: self.sphere.setH(self.sphere, -3))
-        self.accept('arrow_down', lambda: self.sphere.setP(self.sphere, -3))
-        self.accept('arrow_up', lambda: self.sphere.setP(self.sphere, 3))
-        self.accept('arrow_right', lambda: self.sphere.setR(self.sphere, -3))
-        self.accept('arrow_left', lambda: self.sphere.setR(self.sphere, 3))
-        
-        #self.sphere.setTexOffset(self.ts, -1, -0)
-        def updateTex(xc,yc):
-            tsx,tsy = self.sphere.getTexOffset(self.ts)
-            self.sphere.setTexOffset(self.ts, tsx +xc,tsy+ yc)
-        self.accept('t', lambda: updateTex(0.2,0))
-        self.accept('y', lambda: updateTex(-0.2,0))
-        self.accept('g', lambda: updateTex(0,0.2))
-        self.accept('h', lambda: updateTex(0,-0.2))
-        self.accept('o', lambda: rig.setZ(rig, -0.05))
-        self.accept('p', lambda: rig.setZ(rig, 0.05))
-        
-        self.accept('r', reset)
-        
-        def quit():
-            #taskMgr.remove('Quit')
-            #taskMgr.remove('GenerateMappingData')
-            self.destroy()
-            self.userExit()
-            self.finalizeExit()
-        self.accept('q', quit) 
-        self.taskMgr.add(self.movie_ts, "playTheStim!")
-   
-        
-        def changeFrame():
-            self.myTexture = self.loader.loadTexture('res/colored_picture.png')
-            self.sphere.setTexture(self.myTexture)
-        
-        #self.accept('c', changeFrame)
-        #self.taskMgr.remove("igLoop")
-        #self.taskMgr.add(self.generateMappingData, 'GenerateMappingData')
-        #taskMgr.doMethodLater(0.02, quit, 'Quit')
-        
-    def screenshot(self, filename):
-        filename = filename.replace('.png','').replace('flat','pano')
-        self.altBuffer.saveScreenshot(filename + '_screenshot.png') 
 
         
     def generateMappingData(self, task):
-        
+        '''This function generates an xmap and a ymap allowing to remap images to the dome
+        directly from the PanoImage class, without using Panda3D.'''
         x = self.x
         y = self.y
            
@@ -277,7 +258,7 @@ class PanoDisplay(ShowBase):
             print('Task done')
             return Task.done
         return Task.cont
-        
-    def displayCamCoordinates(self, task):
-        self.textObject.setText(str(self.sphere.getHpr()) )
-        return Task.cont
+    
+    def screenshot(self, filename):
+        filename = filename.replace('.png','').replace('flat','pano')
+        self.altBuffer.saveScreenshot(filename + '_screenshot.png') 
