@@ -42,8 +42,8 @@ class PanoImage:
                 im.save(filename + '_stretched.png')
 
     '''
-    WIDTH = 1000
-    HEIGHT = 500 
+    WIDTH = 500
+    HEIGHT = 250 
     
     def __init__(self, im = None, units = 'deg', pos_angles = None, 
                  size = None, background = None, res = (WIDTH,HEIGHT)):
@@ -58,7 +58,7 @@ class PanoImage:
         you can set a different background (same format as image, but dimensions of res)
         res (width, height) always in pixels   
         '''
-        self.BG_COLOR = 0
+        self.BG_COLOR = 127
         
         if im is None:
             print('Info: no array given, loading dummy as array.')
@@ -104,6 +104,9 @@ class PanoImage:
                 x_start, x_end = self._lon2x(-size[0]/2, res[0]), self._lon2x(size[0]/2, res[0])
                 y_start, y_end = self._lat2y(-size[1]/2, res[1]), self._lat2y(size[1]/2, res[1])
                 x, y = x_end - x_start, y_end - y_start
+#                 TODO: check that resizing does not unbalance the picture on one side (even -> uneven)
+#                 if x%2==1:
+#                     x += 1
                 self.im = cv2.resize(self.im, (x,y))
             
     def _loadDummy(self):
@@ -294,8 +297,45 @@ class PanoImage:
         ymap = np.zeros((h,wT*2), np.float32)
         
         #Update maps - wrote loop with Cython
-        loop(x,xmap,ymap,w,h, wT)
-        
+        #loop(x,xmap,ymap,w,h, wT)
+        flagSecondInterval = False
+        start2 = 0
+        tmp = 2*wT
+        for j in range(h):
+            for i in range(w): 
+                if x[j,i] == 0: #limit condition
+                    i2 = i -1
+                    start = x[j,i2] #negative
+                    stop = tmp
+                    start = tmp + start
+                    for l in range(start,stop):
+                        xmap[j, l] = i 
+                        ymap[j, l] = j
+                else:
+                    if i != 0:
+                        i2 = i -1
+                        start = x[j,i2]
+                        stop = x[j,i]
+
+                        if start < 0: #if start negative stop needs to be negative, if it is not we need a second interval
+                            #to cover the central part of the image and avoid a black vertical line
+                            start = tmp + start
+                            if stop <= 0:
+                                stop =  tmp + stop
+                            else:
+                                flagSecondInterval = True
+                                stop2 = stop
+                                stop = tmp
+
+                        for l in range(start, stop):
+                            xmap[j, l] = i
+                            ymap[j, l] = j
+
+                        if flagSecondInterval:
+                            for l in range(start2, stop2):
+                                xmap[j, l] = i
+                                ymap[j, l] = j
+                            flagSecondInterval = False
         #Resize the original image: the remap function can only remap pixels from and to the original image
         #so we place it on a larger background
         resized_im = np.full((h,wT*2,3), self.BG_COLOR, dtype=np.float32)
@@ -342,7 +382,7 @@ class PanoImage:
 
         #pano_im = np.full((h,w,3), self.BG_COLOR, dtype=np.float32)
         #pano_im[:new_im.shape[0], 240: new_im.shape[1]+240] = new_im
-        return new_im*255
+        return new_im
         
     def intersectRectangles(self,x1, y1, x2, y2, x3, y3, x4, y4):
         '''Get the intersection points of two intersecting rectangles.'''
@@ -409,14 +449,16 @@ class PanoImage:
         return
 
 
-xmap = np.loadtxt('res/xymappings/500x250/xmap.txt', dtype=np.float32)
-ymap = np.loadtxt('res/xymappings/500x250/ymap.txt', dtype=np.float32)
+if __name__ == '__main__':
+    im = cv2.imread('res/test_img.png')
+    %prun a=PanoImage(im, units = 'deg', size=[30,30], pos_angles=[0,-40]).stretch()
 
-im = cv2.imread('res/circle.png')
-a=PanoImage(im,units = 'deg', size = (5,5), pos_angles=[0,0]).stretch()
-b = a.toPano(xmap,ymap)
-#b = a.apply()
+    # xmap = np.loadtxt('res/xymappings/500x250/xmap.txt', dtype=np.float32)
+    # ymap = np.loadtxt('res/xymappings/500x250/ymap.txt', dtype=np.float32)
+    # b = a.toPano(xmap,ymap)
 
-#plt.figure(figsize=[10,10])
-#plt.imshow(b,origin='lower')
-#cv2.imwrite('res/panolena.png', b)
+    b = a.apply()
+
+    plt.figure(figsize=[10,10])
+    plt.imshow(b,origin='lower')
+    #cv2.imwrite('res/panocircle.png', b)
