@@ -32,14 +32,18 @@ class PanoImage:
             - matplotlib plot with show()
             
     Example:
-                filename = 'res/test_panodisplay'
-                im = Image.open(filename + '.png')
-                im = im.resize([2048,1024], Image.BILINEAR)
-                a = PanoImage(im).stretch()
-                a.show()
-                b = a.getArray()
-                im = Image.fromarray(b)
-                im.save(filename + '_stretched.png')
+                im = cv2.imread('res/test_img.png')
+                a = PanoImage(im, units = 'deg', size=[30,30], pos_angles=[0,-40]).stretch()
+
+                # xmap = np.loadtxt('res/xymappings/500x250/xmap.txt', dtype=np.float32)
+                # ymap = np.loadtxt('res/xymappings/500x250/ymap.txt', dtype=np.float32)
+                # b = a.toPano(xmap,ymap)
+
+                b = a.apply()
+
+                plt.figure(figsize=[10,10])
+                plt.imshow(b,origin='lower')
+                #cv2.imwrite('res/panocircle.png', b)
 
     '''
     WIDTH = 500
@@ -451,7 +455,7 @@ class PanoImage:
 
 if __name__ == '__main__':
     im = cv2.imread('res/test_img.png')
-    %prun a=PanoImage(im, units = 'deg', size=[30,30], pos_angles=[0,-40]).stretch()
+    a=PanoImage(im, units = 'deg', size=[30,30], pos_angles=[0,-40]).stretch()
 
     # xmap = np.loadtxt('res/xymappings/500x250/xmap.txt', dtype=np.float32)
     # ymap = np.loadtxt('res/xymappings/500x250/ymap.txt', dtype=np.float32)
