@@ -455,7 +455,7 @@ class PanoImage:
 
 if __name__ == '__main__':
     im = cv2.imread('res/test_img.png')
-    a=PanoImage(im, units = 'deg', size=[30,30], pos_angles=[0,-40]).stretch()
+    %prun a=PanoImage(im, units = 'deg', size=[30,30], pos_angles=[0,-40]).stretch()
 
     # xmap = np.loadtxt('res/xymappings/500x250/xmap.txt', dtype=np.float32)
     # ymap = np.loadtxt('res/xymappings/500x250/ymap.txt', dtype=np.float32)
