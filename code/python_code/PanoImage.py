@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from math import cos, pi
 import cv2
 from time import time
-from loop import loop
+#from loop import loop
 
 class PanoImage:
     '''
@@ -179,9 +179,9 @@ class PanoImage:
         im_yTR = pos_im[1]+int(h/2)
 
         #Limit conditions for broadcasting
-        if self.intersectRectangles(im_xBL, im_yBL, im_xTR, im_yTR, 
+        if self._intersectRectangles(im_xBL, im_yBL, im_xTR, im_yTR, 
                                           tex_xBL, tex_yBL, tex_xTR, tex_yTR) is not None:
-            x1,y1,x2,y2 = self.intersectRectangles(im_xBL, im_yBL, im_xTR, im_yTR, 
+            x1,y1,x2,y2 = self._intersectRectangles(im_xBL, im_yBL, im_xTR, im_yTR, 
                                               tex_xBL, tex_yBL, tex_xTR, tex_yTR)
         else:
             raise('The stimulus is completely outside the frame.')
@@ -388,7 +388,7 @@ class PanoImage:
         #pano_im[:new_im.shape[0], 240: new_im.shape[1]+240] = new_im
         return new_im
         
-    def intersectRectangles(self,x1, y1, x2, y2, x3, y3, x4, y4):
+    def _intersectRectangles(self,x1, y1, x2, y2, x3, y3, x4, y4):
         '''Get the intersection points of two intersecting rectangles.'''
         # gives bottom-left point of intersection rectangle 
         x5, y5 = max(x1, x3), max(y1, y3)
@@ -455,7 +455,7 @@ class PanoImage:
 
 if __name__ == '__main__':
     im = cv2.imread('res/test_img.png')
-    %prun a=PanoImage(im, units = 'deg', size=[30,30], pos_angles=[0,-40]).stretch()
+    a=PanoImage(im, units = 'deg', size=[30,30], pos_angles=[0,-40]).stretch()
 
     # xmap = np.loadtxt('res/xymappings/500x250/xmap.txt', dtype=np.float32)
     # ymap = np.loadtxt('res/xymappings/500x250/ymap.txt', dtype=np.float32)
