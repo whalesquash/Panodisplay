@@ -34,7 +34,9 @@ In Git Bash:
     pip install panda3d==1.10.4.1
     
     
-Then you can use 'jupyter notebook' to access the scripts and run them
+Then you can use 
+    jupyter notebook
+to access the scripts and run them
 
 # TODOS
 
