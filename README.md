@@ -44,6 +44,8 @@ to access the scripts and run them
 
 * Add recent picture of the working display
 
-* Add Unity code
-
 * Complete User Guide
+
+* Add kinematic mount on projector
+
+* Get hemispheres with better sphericity
