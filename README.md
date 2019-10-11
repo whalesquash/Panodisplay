@@ -35,7 +35,9 @@ In Git Bash:
     
     
 Then you can use 
+
     jupyter notebook
+    
 to access the scripts and run them
 
 # TODOS
