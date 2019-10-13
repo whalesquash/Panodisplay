@@ -62,7 +62,10 @@ class PanoImage:
         you can set a different background (same format as image, but dimensions of res)
         res (width, height) always in pixels   
         '''
-        self.BG_COLOR = 127
+        if type(background) == int:
+            self.BG_COLOR = background
+        else:
+            self.BG_COLOR = 127
         
         if im is None:
             print('Info: no array given, loading dummy as array.')
@@ -91,7 +94,7 @@ class PanoImage:
             self.res = [2*res[1],res[1]]
             print('Warning: in a spheric coordinate system, the resolution must have a 2:1 aspect ratio: x-coordinate recalculated to fit that requirement: resolution is {0}'.format(self.res))
         
-        if background is None:
+        if (background is None) or (type(background) == int):
             self.background = np.full([self.res[1],self.res[0],3], self.BG_COLOR, dtype = np.uint8)
         else:
             self.background = background
@@ -359,7 +362,7 @@ class PanoImage:
         new_pos_pix_y = np.array([int((bot+top)/2)])
         new_pos_angles_y = self._y2lat(new_pos_pix_y, self.res[1])
         
-        return PanoImage(remapped_im, units=self.units, background = self.background,pos_angles=(self.pos_angles[0],new_pos_angles_y))
+        return PanoImage(remapped_im, units=self.units, background = self.background,pos_angles=(self.pos_angles[0],new_pos_angles_y), res=self.res)
     
     def compress(self):
         return self._imageDeform(compress = True)
